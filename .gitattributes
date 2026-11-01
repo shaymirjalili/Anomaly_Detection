@@ -1,0 +1,3 @@
+# Preserve upstream bytes so the documented SHA256 hashes remain portable.
+third_party/rd4ad/*.py -text
+third_party/rd4ad/LICENSE -text

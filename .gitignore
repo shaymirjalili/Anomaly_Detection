@@ -1,0 +1,11 @@
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+mvtec_anomaly_detection/
+*.pt
+*.pth
+*.log
+tempCodeRunnerFile.python
+# One-off notebook preparation/recovery helpers; use the root runner instead.
+/outputs/*.py
+/outputs/reverse_distillation/smoke_test.py

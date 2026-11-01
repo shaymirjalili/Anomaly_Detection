@@ -2,11 +2,65 @@
 
 This project is a notebook-based anomaly detection workflow using:
 - A **PaDiM baseline**
-- A **StudentMethod** implementation
+- A **Reverse Distillation StudentMethod** implementation
 - Image-level and pixel-level evaluation
 - Qualitative visual comparisons
 
 Main notebook: `anomaly_detection_project_question.ipynb`
+
+The current notebook runs a **30-epoch Reverse Distillation experiment** on all
+15 MVTec categories. The previous VAE implementation and its completed 15-category
+results are preserved in `anomaly_detection_vae.ipynb`.
+
+Reverse Distillation uses a frozen ImageNet ResNet18 teacher, the authors'
+one-class bottleneck, and a reverse ResNet18 decoder. Both PaDiM and this student
+use ImageNet-normalized inputs. Training uses only `train/good`; cached float16
+teacher features avoid repeated image decoding. This is a smaller experiment
+than the paper's WideResNet50 / 200-epoch setup.
+
+Set `EXPERIMENT_CATEGORIES = None` in the category-selection cell to run all
+available categories. `StudentMethod` is defined in `reverse_distillation.py`;
+the original MIT-licensed architecture files are in `third_party/rd4ad`.
+Results, per-epoch losses, prediction arrays, checkpoints, and qualitative PNGs
+are saved under `outputs/reverse_distillation/`.
+
+Run the notebook top-to-bottom, or execute `python run_reverse_distillation.py`
+in an environment with the dependencies below. Restore a trained model with
+`StudentMethod.load('outputs/reverse_distillation/checkpoints/bottle.pt')`.
+Prediction expects ImageNet-normalized 224 x 224 RGB images and returns raw
+cosine-distance scores; choose an operating threshold using a separate normal
+validation set before deploying it.
+
+## Completed Results
+
+The saved notebook includes the completed **15-category run**, with 30 training
+epochs per category, seed 42, and 224 x 224 inputs. All 48 code cells completed
+without cell errors. Training uses normal images only; the metrics below are
+computed on the category test sets. Higher AUROC is better.
+
+| Method | Mean image AUROC | Mean pixel AUROC |
+|---|---:|---:|
+| VAE (previous run) | 0.5647 | 0.6838 |
+| PaDiM | 0.9458 | 0.9647 |
+| Reverse Distillation | **0.9611** | **0.9693** |
+
+These are category means using the notebook's evaluator. Pixel AUROC follows
+its per-anomalous-image averaging, rather than pooling every test pixel.
+This is a local ResNet18 experiment, not a reproduction of the paper's benchmark.
+
+- [Executed notebook](anomaly_detection_project_question.ipynb): sections 8–10
+  contain metrics and figures; the last cell compares the VAE and Reverse Distillation.
+- [Reverse Distillation metrics](outputs/reverse_distillation/rd_metrics.csv)
+- [PaDiM comparison](outputs/reverse_distillation/padim_vs_rd.csv)
+- [Previous VAE comparison](outputs/reverse_distillation/vae_vs_rd.csv)
+- [Saved heatmaps](outputs/reverse_distillation/qualitative/)
+
+The repository includes executed notebooks, CSV metrics, per-epoch training
+histories, prediction arrays, and qualitative figures. Dataset images, model
+checkpoints, caches, and temporary execution logs are excluded from Git.
+Rerunning the notebook creates the model checkpoints locally.
+The student's `runtime_sec` measures prediction only, while PaDiM's includes its
+full category run; use the separate training JSON timings when comparing cost.
 
 ## Project Structure
 
@@ -20,7 +74,8 @@ Anomaly_Detection/
 |   |-- cable/
 |   `-- ... (MVTec categories)
 `-- outputs/
-    `-- qualitative/    # generated qualitative figures
+    `-- reverse_distillation/
+        `-- qualitative/    # Reverse Distillation figures; previous VAE figures remain in outputs/qualitative
 ```
 
 ## Requirements
@@ -28,7 +83,7 @@ Anomaly_Detection/
 Install Python dependencies (example):
 
 ```powershell
-pip install numpy pandas matplotlib pillow scikit-learn torch torchvision jupyter
+pip install numpy pandas scipy matplotlib pillow scikit-learn torch torchvision jupyter nbclient nbformat ipykernel
 ```
 
 ## Dataset Setup
@@ -86,7 +141,7 @@ student_out_by_cat[category] = student.predict(test_loader)
 Qualitative figures are automatically saved to:
 
 ```text
-./outputs/qualitative/
+./outputs/reverse_distillation/qualitative/
 ```
 
 Current plotting helpers support saving:
